@@ -30,13 +30,13 @@ data:
         }
 
         location / {
-          rewrite ^(.*)$ $1?namespace=${NAMESPACE} break;
+          rewrite ^(.*)$ $1?namespace=<NAMESPACE> break;
 
-          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Upgrade "$http_upgrade";
           proxy_set_header Connection "Upgrade";
           proxy_pass https://thanos-querier.openshift-monitoring.svc.cluster.local:9092;
           proxy_set_header Host $host;
-          proxy_set_header Authorization "Bearer ${BEARER}";
+          proxy_set_header Authorization "Bearer <BEARER>";
           proxy_http_version 1.1;
         }
       }

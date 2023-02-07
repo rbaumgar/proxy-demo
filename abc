@@ -1,0 +1,7 @@
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      log_format  main  ' -  [] "" '
+                          '  "" '
+                          '"" ""';
+      access_log  /var/log/nginx/access.log  main;
+

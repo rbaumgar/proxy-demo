@@ -12,99 +12,11 @@ So I have created a simple nginx reverse proxy to help you.
 ```shell
 $ NAMESPACE=`oc project -q`
 $ BEARER=`oc whoami -t`
-$ cat <<EOF | oc apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx
-data:
-  nginx.conf: |
-    # user  nginx;
-    worker_processes  1;
-    error_log  /var/log/nginx/error.log notice;
-    pid        /var/run/nginx.pid;
-    events {
-        worker_connections  1024;
-    }
-    http {
-      include       /etc/nginx/mime.types;
-      default_type  application/octet-stream;
-      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                          '$status $body_bytes_sent "$http_referer" '
-                          '"$http_user_agent" "$http_x_forwarded_for"';
-      access_log  /var/log/nginx/access.log  main;
-      sendfile        on;
-      keepalive_timeout  65;
-      server {
-        listen 9092;
-
-        rewrite_log on;
-
-        location /healthz {
-          return 200;
-        }
-
-        location / {
-          rewrite ^(.*)$ $1?namespace=${NAMESPACE} break;
-
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection "Upgrade";
-          proxy_pass https://thanos-querier.openshift-monitoring.svc.cluster.local:9092;
-          proxy_set_header Host $host;
-          proxy_set_header Authorization "Bearer ${BEARER}";
-          proxy_http_version 1.1;
-        }
-      }
-    }
-EOF
+$ sed "s/<BEARER>/$BEARER/g" configmap.yaml | sed "s/<NAMESPACE>/$NAMESPACE/g" | oc apply -f -
 configmap/nginx created
-$ cat <<EOF | oc apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx
-  labels:
-    app: nginx
-spec:
-  selector:
-    matchLabels:
-      app: nginx
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      containers:
-        - name: nginx
-          image: registry.redhat.io/ubi8/nginx-120
-          command: ["/bin/sh"]
-          args: ["-c", "touch /var/log/nginx/access.log; nginx; tail -f /var/log/nginx/access.log"]
-          ports:
-          - containerPort: 9092
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: nginx
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: nginx
-spec:
-  selector:
-    app: nginx
-  ports:
-  - protocol: TCP
-    port: 9092
-    targetPort: 9092
-    name: nginx
-EOF
+$ oc apply -f deployment.yaml
 deployment.apps/nginx created
+$ oc apply -f service.yaml
 service/nginx created
 ```
 
