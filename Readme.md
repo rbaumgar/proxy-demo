@@ -1,6 +1,6 @@
-# Reverse Proxy for Thanos-Querier in the OpenShift User Monitoring
+# Reverse Proxy for Thanos-Querier in the OpenShift User Workload Monitoring
 
-When you want to use the Thanos-Querier in the OpenShift User Monitoring you have to make some additinial changes to get access to the prometheus data of your project.
+When you want to use the Thanos-Querier in the OpenShift User Workload Monitoring you have to make some additinial changes to get access to the prometheus data of your project.
 - you have to present a authentication bearer to get access.
 - you need to add "namespace=<namespace>" as query parameter. The bearer has to have at least view rights on the namespace.
 
@@ -27,6 +27,8 @@ $ oc get pod -l app=nginx
 NAME                     READY   STATUS    RESTARTS   AGE
 nginx-76545df445-fj48l   1/1     Running   0          82m
 ```
+
+# test 
 
 Now you can check the access to your monitoring data from the thanos-querier via the nginx revers proxy.
 
