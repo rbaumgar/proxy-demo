@@ -11,8 +11,7 @@ So I have created a simple nginx reverse proxy to help you.
 
 ```shell
 $ NAMESPACE=`oc project -q`
-$ BEARER-TOKEN=`oc whoami -t`
-# both values hat to bee replaced in the following configmap!!!
+$ BEARER=`oc whoami -t`
 $ cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: ConfigMap
@@ -46,19 +45,19 @@ data:
         }
 
         location / {
-          rewrite ^(.*)$ $1?namespace=<NAMESPACE> break;
+          rewrite ^(.*)$ $1?namespace=${NAMESPACE} break;
 
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "Upgrade";
           proxy_pass https://thanos-querier.openshift-monitoring.svc.cluster.local:9092;
           proxy_set_header Host $host;
-          proxy_set_header Authorization "Bearer <BEARER-TOKEN>";
+          proxy_set_header Authorization "Bearer ${BEARER}";
           proxy_http_version 1.1;
         }
       }
     }
 EOF
-
+configmap/nginx created
 $ cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -80,7 +79,7 @@ spec:
         - name: nginx
           image: registry.redhat.io/ubi8/nginx-120
           command: ["/bin/sh"]
-          args: ["-c", "nginx; tail -f /var/log/nginx/access.log"]
+          args: ["-c", "touch /var/log/nginx/access.log; nginx; tail -f /var/log/nginx/access.log"]
           ports:
           - containerPort: 9092
           volumeMounts:
@@ -105,7 +104,8 @@ spec:
     targetPort: 9092
     name: nginx
 EOF
-
+deployment.apps/nginx created
+service/nginx created
 ```
 
 Check that the nxinx pod is up and runng
@@ -119,31 +119,31 @@ nginx-76545df445-fj48l   1/1     Running   0          82m
 Now you can check the access to your monitoring data from the thanos-querier via the nginx revers proxy.
 
 ```shell
-$ oc rsh deployment/nginx curl "nginx.proxy-demo.svc:9092/api/v1/query?query=up"|jq
+$ oc rsh deployment/nginx curl "nginx.proxy-demo.svc:9092/api/v1/query?query=up" | jq
 {
-   "status": "success",
-    "data": {
-        "resultType": "vector",
-        "result": [
-            {
-                "metric": {
-                    "__name__": "up",
-                    "container": "otc-container",
-                    "endpoint": "metrics",
-                    "instance": "10.129.3.190:8889",
-                    "job": "my-otelcol-collector",
-                    "namespace": "jaeger-demo",
-                    "pod": "my-otelcol-collector-7d84758987-knv74",
-                    "prometheus": "openshift-user-workload-monitoring/user-workload",
-                    "service": "my-otelcol-collector"
-                    },
-                "value": [
-                    1675783248.911,
-                    "1"
-                    ]
-            },
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "up",
+          "container": "otc-container",
+          "endpoint": "metrics",
+          "instance": "10.129.3.190:8889",
+          "job": "my-otelcol-collector",
+          "namespace": "jaeger-demo",
+          "pod": "my-otelcol-collector-7d84758987-knv74",
+          "prometheus": "openshift-user-workload-monitoring/user-workload",
+          "service": "my-otelcol-collector"
+        },
+        "value": [
+          1675784722.362,
+          "1"
         ]
-    }
+      }
+    ]
+  }
 }
 ```
 
